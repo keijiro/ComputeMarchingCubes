@@ -1,0 +1,98 @@
+#pragma kernel MeshConstructor
+
+#include "Common.hlsl"
+
+// Parameters
+uint3 Dims;
+float IsoValue;
+
+// Output triangle buffer
+AppendStructuredBuffer<Triangle> Output;
+
+// Triangle look up table for each cube configuration
+StructuredBuffer<uint2> TriangleTable;
+
+uint VertexFromTriangleTable(uint2 data, uint index)
+{
+    return 0xfu & (index < 8 ? data.x >> ((index + 0) * 4) :
+                               data.y >> ((index - 8) * 4));
+}
+
+// Input voxel
+StructuredBuffer<float> Voxels;
+
+float VoxelValue(uint3 index)
+{
+    return Voxels[index.x + Dims.x * (index.y + Dims.y * index.z)];
+}
+
+// Cube helper functions
+uint3 CubeVertex(uint index)
+{
+    bool x = index & 1;
+    bool y = index & 2;
+    bool z = index & 4;
+    return uint3(x ^ y, y, z);
+}
+
+uint2 EdgeVertexPair(uint index)
+{
+    // (0,1) (1,2) (2,3) (3,0)
+    // (4,5) (5,6) (6,7) (7,4)
+    // (0,4) (1,5) (2,6) (3,7)
+    uint v1 = index & 7;
+    uint v2 = index < 8 ? ((index + 1) & 3) | (index & 4) : v1 + 4;
+    return uint2(v1, v2);
+}
+
+//
+// Marching cube kernel function
+//
+[numthreads(8, 8, 8)]
+void MeshConstructor(uint3 id : SV_DispatchThreadID)
+{
+    // Boundary check
+    if (any(id + 1 >= Dims.xyz)) return;
+
+    // Values at each cube vertex
+    float values[8];
+    for (uint i = 0; i < 8; i++)
+        values[i] = VoxelValue(id + CubeVertex(i));
+
+    // Cube configuration selector as a bit field of vertex binary states
+    uint selector = 0;
+    for (i = 0; i < 8; i++)
+        selector |= (values[i] < IsoValue) << i;
+
+    // Special case for empty cubes; Exit ealy if there is no intersection.
+    if (selector == 0 || selector == 0xff) return;
+
+    // Intersection points on each edge
+    // Do it in the GPU's way! We do calculation on all the edges, even on
+    // edges without intersection.
+    float3 edge_points[12];
+    for (i = 0; i < 12; i++)
+    {
+        uint2 pair = EdgeVertexPair(i);
+        float value1 = values[pair.x];
+        float value2 = values[pair.y];
+        float3 vertex1 = id + CubeVertex(pair.x);
+        float3 vertex2 = id + CubeVertex(pair.y);
+        float param = (IsoValue - value1) / (value2 - value1);
+        edge_points[i] = lerp(vertex1, vertex2, param);
+    }
+
+    uint2 tri_data = TriangleTable[selector];
+    for (i = 0; i < 15; i += 3)
+    {
+        uint v1 = VertexFromTriangleTable(tri_data, i);
+        uint v2 = VertexFromTriangleTable(tri_data, i + 1);
+        uint v3 = VertexFromTriangleTable(tri_data, i + 2);
+        if (v1 == 15) return;
+        Triangle t;
+        t.v1 = edge_points[v1];
+        t.v2 = edge_points[v2];
+        t.v3 = edge_points[v3];
+        Output.Append(t);
+    }
+}

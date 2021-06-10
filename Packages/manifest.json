@@ -1,0 +1,15 @@
+{
+  "scopedRegistries": [
+    {
+      "name": "Keijiro",
+      "url": "https://registry.npmjs.com",
+      "scopes": [
+        "jp.keijiro"
+      ]
+    }
+  ],
+  "dependencies": {
+    "jp.keijiro.noiseshader": "2.0.0",
+    "jp.keijiro.test-assets": "1.0.1"
+  }
+}
