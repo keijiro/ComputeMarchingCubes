@@ -154,6 +154,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _targetValue: 0
   _material: {fileID: 2100000, guid: e85dbe4dffb6f4e7baf8ccd86345a9ed, type: 2}
+  _volumeGenerator: {fileID: 7200000, guid: 83e790b3dd3e04b42bbca902678e5f87, type: 3}
   _meshConstructor: {fileID: 7200000, guid: 9f19ed91e8aa34430ac0ea80fb20eead, type: 3}
   _meshConverter: {fileID: 7200000, guid: 2baef4f47716548eca94b7a1a8257b34, type: 3}
 --- !u!4 &1056107552

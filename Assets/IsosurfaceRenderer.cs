@@ -8,11 +8,13 @@ sealed class IsosurfaceRenderer : MonoBehaviour
     [SerializeField] float _targetValue = 0;
 
     [SerializeField] Material _material = null;
+    [SerializeField] ComputeShader _volumeGenerator = null;
     [SerializeField] ComputeShader _meshConstructor = null;
     [SerializeField] ComputeShader _meshConverter = null;
 
     const int Size = 32;
-    const int VertexBudget = 64 * 3 * 1000;
+    const int TriangleBudget = 64 * 1000;
+    const int VertexBudget = 3 * TriangleBudget;
 
     ComputeBuffer _triangleTable;
     ComputeBuffer _voxelBuffer;
@@ -60,28 +62,15 @@ sealed class IsosurfaceRenderer : MonoBehaviour
         _triangleTable = new ComputeBuffer(256, 8);
         _triangleTable.SetData(PrecalculatedData.TriangleTable);
 
-        _voxelBuffer = new ComputeBuffer(Size * Size * Size * Size, 4);
-        _voxelBuffer.SetData(Util.GenerateDummyData(Size));
+        _voxelBuffer = new ComputeBuffer(Size * Size * Size, 4);
+        //_voxelBuffer.SetData(Util.GenerateDummyData(Size));
 
         _triangleBuffer = new ComputeBuffer
-          (10000, sizeof(float) * 3 * 3, ComputeBufferType.Append);
+          (TriangleBudget, sizeof(float) * 3 * 3, ComputeBufferType.Append);
 
         _countBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
 
-        _meshConstructor.SetInts("Dims", Size, Size, Size);
-        _meshConstructor.SetFloat("IsoValue", _targetValue);
-        _meshConstructor.SetBuffer(0, "TriangleTable", _triangleTable);
-        _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
-        _meshConstructor.SetBuffer(0, "Output", _triangleBuffer);
-        _meshConstructor.Dispatch(0, Size / 8, Size / 8, Size / 8);
 
-        ComputeBuffer.CopyCount(_triangleBuffer, _countBuffer, 0);
-
-        _meshConverter.SetBuffer(0, "Input", _triangleBuffer);
-        _meshConverter.SetBuffer(0, "Count", _countBuffer);
-        _meshConverter.SetBuffer(0, "VertexBuffer", _vertexBuffer);
-        _meshConverter.SetBuffer(0, "IndexBuffer", _indexBuffer);
-        _meshConverter.Dispatch(0, VertexBudget / 3 / 64, 1, 1);
     }
 
     void OnDestroy()
@@ -98,9 +87,29 @@ sealed class IsosurfaceRenderer : MonoBehaviour
 
     void Update()
     {
+        _volumeGenerator.SetFloat("Time", Time.time);
+        _volumeGenerator.SetInts("Dims", Size, Size, Size);
+        _volumeGenerator.SetBuffer(0, "Voxels", _voxelBuffer);
+        _volumeGenerator.Dispatch(0, Size / 8, Size / 8, Size / 8);
+
+        _triangleTable.SetCounterValue(0);
+        _meshConstructor.SetInts("Dims", Size, Size, Size);
+        _meshConstructor.SetFloat("IsoValue", _targetValue);
+        _meshConstructor.SetBuffer(0, "TriangleTable", _triangleTable);
+        _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
+        _meshConstructor.SetBuffer(0, "Output", _triangleBuffer);
+        _meshConstructor.Dispatch(0, Size / 8, Size / 8, Size / 8);
+
+        ComputeBuffer.CopyCount(_triangleBuffer, _countBuffer, 0);
+
+        _meshConverter.SetBuffer(0, "Input", _triangleBuffer);
+        _meshConverter.SetBuffer(0, "Count", _countBuffer);
+        _meshConverter.SetBuffer(0, "VertexBuffer", _vertexBuffer);
+        _meshConverter.SetBuffer(0, "IndexBuffer", _indexBuffer);
+        _meshConverter.Dispatch(0, TriangleBudget / 64, 1, 1);
+
         Graphics.DrawMesh
           (_mesh, transform.localToWorldMatrix, _material, gameObject.layer);
-        
     }
 }
 

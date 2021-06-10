@@ -37,6 +37,10 @@ void MeshConverter(uint id : SV_DispatchThreadID)
     }
     else
     {
+        WriteVertex(vidx + 0, 0, 0);
+        WriteVertex(vidx + 1, 0, 0);
+        WriteVertex(vidx + 2, 0, 0);
+
         IndexBuffer.Store3(vidx * 4, 0);
     }
 }

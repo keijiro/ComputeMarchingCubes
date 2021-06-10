@@ -1,0 +1,14 @@
+#pragma kernel VolumeGenerator
+
+#include "Packages/jp.keijiro.noiseshader/Shader/SimplexNoise3D.hlsl"
+
+float Time;
+uint3 Dims;
+RWStructuredBuffer<float> Voxels;
+
+[numthreads(8, 8, 8)]
+void VolumeGenerator(uint3 id : SV_DispatchThreadID)
+{
+    float value = SimplexNoise(id * 0.0524 + 0.3 * Time);
+    Voxels[id.x + Dims.x * (id.y + Dims.y * id.z)] = value;
+}
