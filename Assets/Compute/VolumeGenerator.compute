@@ -9,6 +9,9 @@ RWStructuredBuffer<float> Voxels;
 [numthreads(8, 8, 8)]
 void VolumeGenerator(uint3 id : SV_DispatchThreadID)
 {
-    float value = SimplexNoise(id * 0.0524 + 0.3 * Time);
+    float3 p = 2.0 * id / Dims - 1;
+    float3 offs = float3(0, 0, -0.3 * Time);
+    float value = SimplexNoise(p + offs);
+    value += p.z;
     Voxels[id.x + Dims.x * (id.y + Dims.y * id.z)] = value;
 }

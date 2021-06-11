@@ -13,7 +13,7 @@ sealed class IsosurfaceRenderer : MonoBehaviour
     [SerializeField] ComputeShader _meshConverter = null;
 
     const int Size = 32;
-    const int TriangleBudget = 64 * 1000;
+    const int TriangleBudget = 65536;
     const int VertexBudget = 3 * TriangleBudget;
 
     ComputeBuffer _triangleTable;
