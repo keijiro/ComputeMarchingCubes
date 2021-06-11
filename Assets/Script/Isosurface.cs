@@ -21,7 +21,7 @@ sealed class Isosurface : MonoBehaviour
 
     #region Isosurface settings
 
-    const int Size = 32;
+    const int Size = 64;
     const int TriangleBudget = 65536;
 
     #endregion
