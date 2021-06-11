@@ -75,15 +75,15 @@ sealed class Isosurface : MonoBehaviour
 
     #region Compute objects
 
-    ComputeBuffer _triangleTable;
+    ComputeBuffer _tableBuffer;
     ComputeBuffer _voxelBuffer;
     ComputeBuffer _triangleBuffer;
     ComputeBuffer _countBuffer;
 
     void AllocateComputeBuffers()
     {
-        _triangleTable = new ComputeBuffer(256, 8);
-        _triangleTable.SetData(PrecalculatedData.TriangleTable);
+        _tableBuffer = new ComputeBuffer(256, 8);
+        _tableBuffer.SetData(PrecalculatedData.TriangleTable);
 
         _voxelBuffer = new ComputeBuffer(Size * Size * Size, 4);
 
@@ -96,7 +96,7 @@ sealed class Isosurface : MonoBehaviour
 
     void ReleaseComputeBuffers()
     {
-        _triangleTable.Dispose();
+        _tableBuffer.Dispose();
         _voxelBuffer.Dispose();
         _triangleBuffer.Dispose();
         _countBuffer.Dispose();
@@ -126,10 +126,11 @@ sealed class Isosurface : MonoBehaviour
         _volumeGenerator.SetBuffer(0, "Voxels", _voxelBuffer);
         _volumeGenerator.Dispatch(0, Size / 8, Size / 8, Size / 8);
 
-        _triangleTable.SetCounterValue(0);
+        _triangleBuffer.SetCounterValue(0);
+
         _meshConstructor.SetInts("Dims", Size, Size, Size);
         _meshConstructor.SetFloat("IsoValue", _targetValue);
-        _meshConstructor.SetBuffer(0, "TriangleTable", _triangleTable);
+        _meshConstructor.SetBuffer(0, "TriangleTable", _tableBuffer);
         _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
         _meshConstructor.SetBuffer(0, "Output", _triangleBuffer);
         _meshConstructor.Dispatch(0, Size / 8, Size / 8, Size / 8);
