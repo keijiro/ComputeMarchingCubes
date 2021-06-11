@@ -3,29 +3,36 @@ using UnityEngine.Rendering;
 
 namespace MarchingCube {
 
-sealed class IsosurfaceRenderer : MonoBehaviour
+sealed class Isosurface : MonoBehaviour
 {
+    #region Editable attributes
+
     [SerializeField] float _targetValue = 0;
 
-    [SerializeField] Material _material = null;
-    [SerializeField] ComputeShader _volumeGenerator = null;
-    [SerializeField] ComputeShader _meshConstructor = null;
-    [SerializeField] ComputeShader _meshConverter = null;
+    #endregion
+
+    #region Project asset references
+
+    [SerializeField, HideInInspector] ComputeShader _volumeGenerator = null;
+    [SerializeField, HideInInspector] ComputeShader _meshConstructor = null;
+    [SerializeField, HideInInspector] ComputeShader _meshConverter = null;
+
+    #endregion
+
+    #region Isosurface settings
 
     const int Size = 32;
     const int TriangleBudget = 65536;
-    const int VertexBudget = 3 * TriangleBudget;
 
-    ComputeBuffer _triangleTable;
-    ComputeBuffer _voxelBuffer;
-    ComputeBuffer _triangleBuffer;
-    ComputeBuffer _countBuffer;
+    #endregion
+
+    #region Mesh objects
 
     Mesh _mesh;
     GraphicsBuffer _vertexBuffer;
     GraphicsBuffer _indexBuffer;
 
-    void Start()
+    void AllocateMesh(int vertexCount)
     {
         _mesh = new Mesh();
 
@@ -42,11 +49,11 @@ sealed class IsosurfaceRenderer : MonoBehaviour
           (VertexAttribute.Normal, VertexAttributeFormat.Float32, 3);
 
         // Vertex/index buffer formats
-        _mesh.SetVertexBufferParams(VertexBudget, vp, vn);
-        _mesh.SetIndexBufferParams(VertexBudget, IndexFormat.UInt32);
+        _mesh.SetVertexBufferParams(vertexCount, vp, vn);
+        _mesh.SetIndexBufferParams(vertexCount, IndexFormat.UInt32);
 
         // Submesh initialization
-        _mesh.SetSubMesh(0, new SubMeshDescriptor(0, VertexBudget),
+        _mesh.SetSubMesh(0, new SubMeshDescriptor(0, vertexCount),
                          MeshUpdateFlags.DontRecalculateBounds);
 
         // Big bounds to avoid getting culled
@@ -55,34 +62,61 @@ sealed class IsosurfaceRenderer : MonoBehaviour
         // GraphicsBuffer references
         _vertexBuffer = _mesh.GetVertexBuffer(0);
         _indexBuffer = _mesh.GetIndexBuffer();
-
-        //
-        //
-
-        _triangleTable = new ComputeBuffer(256, 8);
-        _triangleTable.SetData(PrecalculatedData.TriangleTable);
-
-        _voxelBuffer = new ComputeBuffer(Size * Size * Size, 4);
-        //_voxelBuffer.SetData(Util.GenerateDummyData(Size));
-
-        _triangleBuffer = new ComputeBuffer
-          (TriangleBudget, sizeof(float) * 3 * 3, ComputeBufferType.Append);
-
-        _countBuffer = new ComputeBuffer(1, sizeof(uint), ComputeBufferType.Raw);
-
-
     }
 
-    void OnDestroy()
+    void ReleaseMesh()
     {
         _vertexBuffer.Dispose();
         _indexBuffer.Dispose();
         Destroy(_mesh);
+    }
 
+    #endregion
+
+    #region Compute objects
+
+    ComputeBuffer _triangleTable;
+    ComputeBuffer _voxelBuffer;
+    ComputeBuffer _triangleBuffer;
+    ComputeBuffer _countBuffer;
+
+    void AllocateComputeBuffers()
+    {
+        _triangleTable = new ComputeBuffer(256, 8);
+        _triangleTable.SetData(PrecalculatedData.TriangleTable);
+
+        _voxelBuffer = new ComputeBuffer(Size * Size * Size, 4);
+
+        _triangleBuffer = new ComputeBuffer
+          (TriangleBudget, sizeof(float) * 3 * 3, ComputeBufferType.Append);
+
+        _countBuffer = new ComputeBuffer
+          (1, sizeof(uint), ComputeBufferType.Raw);
+    }
+
+    void ReleaseComputeBuffers()
+    {
         _triangleTable.Dispose();
         _voxelBuffer.Dispose();
         _triangleBuffer.Dispose();
         _countBuffer.Dispose();
+    }
+
+    #endregion
+
+    #region MonoBehaviour implementation
+
+    void Start()
+    {
+        AllocateMesh(3 * TriangleBudget);
+        AllocateComputeBuffers();
+        GetComponent<MeshFilter>().sharedMesh = _mesh;
+    }
+
+    void OnDestroy()
+    {
+        ReleaseMesh();
+        ReleaseComputeBuffers();
     }
 
     void Update()
@@ -107,10 +141,9 @@ sealed class IsosurfaceRenderer : MonoBehaviour
         _meshConverter.SetBuffer(0, "VertexBuffer", _vertexBuffer);
         _meshConverter.SetBuffer(0, "IndexBuffer", _indexBuffer);
         _meshConverter.Dispatch(0, TriangleBudget / 64, 1, 1);
-
-        Graphics.DrawMesh
-          (_mesh, transform.localToWorldMatrix, _material, gameObject.layer);
     }
+
+    #endregion
 }
 
 } // namespace MarchingCube
