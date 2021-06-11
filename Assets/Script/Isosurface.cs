@@ -88,7 +88,7 @@ sealed class Isosurface : MonoBehaviour
         _voxelBuffer = new ComputeBuffer(Size * Size * Size, sizeof(float));
 
         _triangleBuffer = new ComputeBuffer
-          (TriangleBudget, 3 * 3 * sizeof(float), ComputeBufferType.Counter);
+          (TriangleBudget, 6 * 3 * sizeof(float), ComputeBufferType.Counter);
 
         _countBuffer = new ComputeBuffer
           (1, sizeof(uint), ComputeBufferType.Raw);
@@ -134,7 +134,7 @@ sealed class Isosurface : MonoBehaviour
         _meshConstructor.SetBuffer(0, "TriangleTable", _tableBuffer);
         _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
         _meshConstructor.SetBuffer(0, "Output", _triangleBuffer);
-        _meshConstructor.Dispatch(0, Size / 8, Size / 8, Size / 8);
+        _meshConstructor.Dispatch(0, Size / 4, Size / 4, Size / 4);
 
         ComputeBuffer.CopyCount(_triangleBuffer, _countBuffer, 0);
 
