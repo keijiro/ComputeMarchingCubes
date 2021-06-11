@@ -3,11 +3,12 @@
 #include "Common.hlsl"
 
 // Parameters
+uint MaxTriangle;
 uint3 Dims;
 float IsoValue;
 
 // Output triangle buffer
-AppendStructuredBuffer<Triangle> Output;
+RWStructuredBuffer<Triangle> Output;
 
 // Triangle look up table for each cube configuration
 StructuredBuffer<uint2> TriangleTable;
@@ -93,6 +94,7 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
         t.v1 = edge_points[v1];
         t.v2 = edge_points[v2];
         t.v3 = edge_points[v3];
-        Output.Append(t);
+        uint c = Output.IncrementCounter();
+        if (c < MaxTriangle) Output[c] = t;
     }
 }

@@ -2,7 +2,7 @@
 
 #include "Common.hlsl"
 
-ConsumeStructuredBuffer<Triangle> Input;
+StructuredBuffer<Triangle> Input;
 ByteAddressBuffer Count;
 
 RWByteAddressBuffer VertexBuffer;
@@ -25,7 +25,7 @@ void MeshConverter(uint id : SV_DispatchThreadID)
 
     if (id < count)
     {
-        Triangle i = Input.Consume();
+        Triangle i = Input[id];
 
         float3 n = normalize(cross(i.v2 - i.v1, i.v3 - i.v1));
 

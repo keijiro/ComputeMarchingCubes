@@ -82,13 +82,13 @@ sealed class Isosurface : MonoBehaviour
 
     void AllocateComputeBuffers()
     {
-        _tableBuffer = new ComputeBuffer(256, 8);
+        _tableBuffer = new ComputeBuffer(256, sizeof(ulong));
         _tableBuffer.SetData(PrecalculatedData.TriangleTable);
 
-        _voxelBuffer = new ComputeBuffer(Size * Size * Size, 4);
+        _voxelBuffer = new ComputeBuffer(Size * Size * Size, sizeof(float));
 
         _triangleBuffer = new ComputeBuffer
-          (TriangleBudget, sizeof(float) * 3 * 3, ComputeBufferType.Append);
+          (TriangleBudget, 3 * 3 * sizeof(float), ComputeBufferType.Counter);
 
         _countBuffer = new ComputeBuffer
           (1, sizeof(uint), ComputeBufferType.Raw);
@@ -128,6 +128,7 @@ sealed class Isosurface : MonoBehaviour
 
         _triangleBuffer.SetCounterValue(0);
 
+        _meshConstructor.SetInt("MaxTriangle", TriangleBudget);
         _meshConstructor.SetInts("Dims", Size, Size, Size);
         _meshConstructor.SetFloat("IsoValue", _targetValue);
         _meshConstructor.SetBuffer(0, "TriangleTable", _tableBuffer);
