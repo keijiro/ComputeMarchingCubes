@@ -8,6 +8,7 @@ sealed class Isosurface : MonoBehaviour
     #region Editable attributes
 
     [SerializeField] Vector3Int _dimensions = new Vector3Int(32, 32, 32);
+    [SerializeField] float _gridScale = 1.0f / 32;
     [SerializeField] int _triangleBudget = 65536;
     [SerializeField] float _targetValue = 0;
 
@@ -117,15 +118,16 @@ sealed class Isosurface : MonoBehaviour
 
     void Update()
     {
-        _volumeGenerator.SetFloat("Time", Time.time);
         _volumeGenerator.SetInts("Dims", _dimensions);
+        _volumeGenerator.SetFloat("Scale", _gridScale);
+        _volumeGenerator.SetFloat("Time", Time.time);
         _volumeGenerator.SetBuffer(0, "Voxels", _voxelBuffer);
         _volumeGenerator.DispatchThreads(0, _dimensions);
 
         _triangleBuffer.SetCounterValue(0);
 
-        _meshConstructor.SetInt("MaxTriangle", _triangleBudget);
         _meshConstructor.SetInts("Dims", _dimensions);
+        _meshConstructor.SetInt("MaxTriangle", _triangleBudget);
         _meshConstructor.SetFloat("IsoValue", _targetValue);
         _meshConstructor.SetBuffer(0, "TriangleTable", _tableBuffer);
         _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
@@ -134,6 +136,8 @@ sealed class Isosurface : MonoBehaviour
 
         ComputeBuffer.CopyCount(_triangleBuffer, _countBuffer, 0);
 
+        _meshConverter.SetInts("Dims", _dimensions);
+        _meshConverter.SetFloat("Scale", _gridScale);
         _meshConverter.SetBuffer(0, "Input", _triangleBuffer);
         _meshConverter.SetBuffer(0, "Count", _countBuffer);
         _meshConverter.SetBuffer(0, "VertexBuffer", _vertexBuffer);

@@ -2,16 +2,17 @@
 
 #include "Packages/jp.keijiro.noiseshader/Shader/SimplexNoise3D.hlsl"
 
-float Time;
 uint3 Dims;
+float Scale;
+float Time;
 RWStructuredBuffer<float> Voxels;
 
 [numthreads(8, 8, 8)]
 void VolumeGenerator(uint3 id : SV_DispatchThreadID)
 {
-    float3 p = 3.0 * id / Dims - 1;
-    float3 offs = float3(0, 0, -0.3 * Time);
-    float value = SimplexNoise(p + offs);
-    value -= p.z;
+    float3 p = Scale * (id + 0.5 - Dims / 2);
+    float value = p.y;
+    value += SimplexNoise(p * 0.83 + float3(-0.37, -0.12, 0) * Time) * 0.5;
+    value += SimplexNoise(p * 0.72 + float3(0.21, +0.07, 0) * Time) * 0.5;
     Voxels[id.x + Dims.x * (id.y + Dims.y * id.z)] = value;
 }
