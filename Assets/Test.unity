@@ -219,6 +219,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4f994fd18064346a58ff0190545aed4e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _dimensions: {x: 64, y: 64, z: 64}
+  _triangleBudget: 65536
   _targetValue: 0
   _volumeGenerator: {fileID: 7200000, guid: 83e790b3dd3e04b42bbca902678e5f87, type: 3}
   _meshConstructor: {fileID: 7200000, guid: 9f19ed91e8aa34430ac0ea80fb20eead, type: 3}

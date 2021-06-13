@@ -7,6 +7,8 @@ sealed class Isosurface : MonoBehaviour
 {
     #region Editable attributes
 
+    [SerializeField] Vector3Int _dimensions = new Vector3Int(32, 32, 32);
+    [SerializeField] int _triangleBudget = 65536;
     [SerializeField] float _targetValue = 0;
 
     #endregion
@@ -16,13 +18,6 @@ sealed class Isosurface : MonoBehaviour
     [SerializeField, HideInInspector] ComputeShader _volumeGenerator = null;
     [SerializeField, HideInInspector] ComputeShader _meshConstructor = null;
     [SerializeField, HideInInspector] ComputeShader _meshConverter = null;
-
-    #endregion
-
-    #region Isosurface settings
-
-    const int Size = 64;
-    const int TriangleBudget = 65536;
 
     #endregion
 
@@ -85,10 +80,11 @@ sealed class Isosurface : MonoBehaviour
         _tableBuffer = new ComputeBuffer(256, sizeof(ulong));
         _tableBuffer.SetData(PrecalculatedData.TriangleTable);
 
-        _voxelBuffer = new ComputeBuffer(Size * Size * Size, sizeof(float));
+        _voxelBuffer = new ComputeBuffer
+          (_dimensions.x * _dimensions.y * _dimensions.z, sizeof(float));
 
         _triangleBuffer = new ComputeBuffer
-          (TriangleBudget, 6 * 3 * sizeof(float), ComputeBufferType.Counter);
+          (_triangleBudget, 6 * 3 * sizeof(float), ComputeBufferType.Counter);
 
         _countBuffer = new ComputeBuffer
           (1, sizeof(uint), ComputeBufferType.Raw);
@@ -108,7 +104,7 @@ sealed class Isosurface : MonoBehaviour
 
     void Start()
     {
-        AllocateMesh(3 * TriangleBudget);
+        AllocateMesh(3 * _triangleBudget);
         AllocateComputeBuffers();
         GetComponent<MeshFilter>().sharedMesh = _mesh;
     }
@@ -122,19 +118,19 @@ sealed class Isosurface : MonoBehaviour
     void Update()
     {
         _volumeGenerator.SetFloat("Time", Time.time);
-        _volumeGenerator.SetInts("Dims", Size, Size, Size);
+        _volumeGenerator.SetInts("Dims", _dimensions);
         _volumeGenerator.SetBuffer(0, "Voxels", _voxelBuffer);
-        _volumeGenerator.Dispatch(0, Size / 8, Size / 8, Size / 8);
+        _volumeGenerator.DispatchThreads(0, _dimensions);
 
         _triangleBuffer.SetCounterValue(0);
 
-        _meshConstructor.SetInt("MaxTriangle", TriangleBudget);
-        _meshConstructor.SetInts("Dims", Size, Size, Size);
+        _meshConstructor.SetInt("MaxTriangle", _triangleBudget);
+        _meshConstructor.SetInts("Dims", _dimensions);
         _meshConstructor.SetFloat("IsoValue", _targetValue);
         _meshConstructor.SetBuffer(0, "TriangleTable", _tableBuffer);
         _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
         _meshConstructor.SetBuffer(0, "Output", _triangleBuffer);
-        _meshConstructor.Dispatch(0, Size / 4, Size / 4, Size / 4);
+        _meshConstructor.DispatchThreads(0, _dimensions);
 
         ComputeBuffer.CopyCount(_triangleBuffer, _countBuffer, 0);
 
@@ -142,7 +138,7 @@ sealed class Isosurface : MonoBehaviour
         _meshConverter.SetBuffer(0, "Count", _countBuffer);
         _meshConverter.SetBuffer(0, "VertexBuffer", _vertexBuffer);
         _meshConverter.SetBuffer(0, "IndexBuffer", _indexBuffer);
-        _meshConverter.Dispatch(0, TriangleBudget / 64, 1, 1);
+        _meshConverter.DispatchThreads(0, _triangleBudget, 1, 1);
     }
 
     #endregion
