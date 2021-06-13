@@ -41,15 +41,14 @@ float4 VoxelSample(uint3 i)
     float v_nz = VoxelValue(i.x, i.y, i_n.z);
     float v_pz = VoxelValue(i.x, i.y, i_p.z);
 
-    return float4(v_nx - v_px, v_ny - v_py, v_nz - v_pz, v);
+    return float4(v_px - v_nx, v_py - v_ny, v_pz - v_nz, v);
 }
 
 // Cube helper functions
 uint3 CubeVertex(uint index)
 {
     bool x = index & 1;
-    bool y = index & 2;
-    bool z = index & 4;
+    bool y = index & 2; bool z = index & 4;
     return uint3(x ^ y, y, z);
 }
 
@@ -108,8 +107,8 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
     for (i = 0; i < 15; i += 3)
     {
         uint v1 = VertexFromTriangleTable(tri_data, i);
-        uint v2 = VertexFromTriangleTable(tri_data, i + 1);
-        uint v3 = VertexFromTriangleTable(tri_data, i + 2);
+        uint v2 = VertexFromTriangleTable(tri_data, i + 2);
+        uint v3 = VertexFromTriangleTable(tri_data, i + 1);
         if (v1 == 15) return;
 
         uint count = Output.IncrementCounter();
