@@ -1,6 +1,6 @@
 using UnityEngine;
 
-namespace MarchingCube {
+namespace MarchingCubes {
 
 static class Util
 {

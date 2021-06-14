@@ -1,4 +1,4 @@
-namespace MarchingCube {
+namespace MarchingCubes {
 
 static class PrecalculatedData
 {

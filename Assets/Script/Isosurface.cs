@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace MarchingCube {
+namespace MarchingCubes {
 
 sealed class Isosurface : MonoBehaviour
 {
