@@ -130,7 +130,7 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
 
         float param = (IsoValue - sample1.w) / (sample2.w - sample1.w);
         float3 p = lerp(vertex1, vertex2, param);
-        float3 n = normalize(lerp(sample1.xyz, sample2.xyz, param));
+        float3 n = -normalize(lerp(sample1.xyz, sample2.xyz, param));
 
         p = Scale * (p + 0.5 - Dims / 2);
 
@@ -153,7 +153,7 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
         WriteVertex(vidx + 0, points[v1]);
         WriteVertex(vidx + 1, points[v2]);
         WriteVertex(vidx + 2, points[v3]);
-        WriteIndices(vidx, uint3(vidx, vidx + 2, vidx + 1));
+        WriteIndices(vidx, uint3(vidx, vidx + 1, vidx + 2));
     }
 }
 
