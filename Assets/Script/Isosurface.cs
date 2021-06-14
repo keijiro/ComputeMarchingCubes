@@ -24,17 +24,15 @@ sealed class Isosurface : MonoBehaviour
 
     #region Mesh objects
 
-    Mesh _mesh;
-    GraphicsBuffer _vertexBuffer;
-    GraphicsBuffer _indexBuffer;
+    (Mesh mesh, GraphicsBuffer vertices, GraphicsBuffer indices) _surface;
 
     void AllocateMesh(int vertexCount)
     {
-        _mesh = new Mesh();
+        var mesh = new Mesh();
 
         // We want GraphicsBuffer access as Raw (ByteAddress) buffers.
-        _mesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
-        _mesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
+        mesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
+        mesh.vertexBufferTarget |= GraphicsBuffer.Target.Raw;
 
         // Vertex position: float32 x 3
         var vp = new VertexAttributeDescriptor
@@ -45,58 +43,55 @@ sealed class Isosurface : MonoBehaviour
           (VertexAttribute.Normal, VertexAttributeFormat.Float32, 3);
 
         // Vertex/index buffer formats
-        _mesh.SetVertexBufferParams(vertexCount, vp, vn);
-        _mesh.SetIndexBufferParams(vertexCount, IndexFormat.UInt32);
+        mesh.SetVertexBufferParams(vertexCount, vp, vn);
+        mesh.SetIndexBufferParams(vertexCount, IndexFormat.UInt32);
 
         // Submesh initialization
-        _mesh.SetSubMesh(0, new SubMeshDescriptor(0, vertexCount),
-                         MeshUpdateFlags.DontRecalculateBounds);
+        mesh.SetSubMesh(0, new SubMeshDescriptor(0, vertexCount),
+                        MeshUpdateFlags.DontRecalculateBounds);
 
         // Big bounds to avoid getting culled
-        _mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 1000);
+        mesh.bounds = new Bounds(Vector3.zero, Vector3.one * 1000);
 
         // GraphicsBuffer references
-        _vertexBuffer = _mesh.GetVertexBuffer(0);
-        _indexBuffer = _mesh.GetIndexBuffer();
+        _surface = (mesh, mesh.GetVertexBuffer(0), mesh.GetIndexBuffer());
     }
 
     void ReleaseMesh()
     {
-        _vertexBuffer.Dispose();
-        _indexBuffer.Dispose();
-        Destroy(_mesh);
+        _surface.vertices.Dispose();
+        _surface.indices.Dispose();
+        Destroy(_surface.mesh);
     }
 
     #endregion
 
     #region Compute objects
 
-    ComputeBuffer _tableBuffer;
-    ComputeBuffer _voxelBuffer;
-    ComputeBuffer _triangleBuffer;
-    ComputeBuffer _countBuffer;
+    (ComputeBuffer table, ComputeBuffer voxel,
+     ComputeBuffer triangle, ComputeBuffer count) _buffer;
 
     void AllocateComputeBuffers()
     {
-        _tableBuffer = new ComputeBuffer(256, sizeof(ulong));
-        _tableBuffer.SetData(PrecalculatedData.TriangleTable);
+        _buffer.table = new ComputeBuffer(256, sizeof(ulong));
+        _buffer.table.SetData(PrecalculatedData.TriangleTable);
 
-        _voxelBuffer = new ComputeBuffer
+        _buffer.voxel = new ComputeBuffer
           (_dimensions.x * _dimensions.y * _dimensions.z, sizeof(float));
 
-        _triangleBuffer = new ComputeBuffer
+        _buffer.triangle = new ComputeBuffer
           (_triangleBudget, 6 * 3 * sizeof(float), ComputeBufferType.Counter);
 
-        _countBuffer = new ComputeBuffer
+        _buffer.count = new ComputeBuffer
           (1, sizeof(uint), ComputeBufferType.Raw);
     }
 
     void ReleaseComputeBuffers()
     {
-        _tableBuffer.Dispose();
-        _voxelBuffer.Dispose();
-        _triangleBuffer.Dispose();
-        _countBuffer.Dispose();
+        _buffer.table.Dispose();
+        _buffer.voxel.Dispose();
+        _buffer.triangle.Dispose();
+        _buffer.count.Dispose();
     }
 
     #endregion
@@ -107,7 +102,7 @@ sealed class Isosurface : MonoBehaviour
     {
         AllocateMesh(3 * _triangleBudget);
         AllocateComputeBuffers();
-        GetComponent<MeshFilter>().sharedMesh = _mesh;
+        GetComponent<MeshFilter>().sharedMesh = _surface.mesh;
     }
 
     void OnDestroy()
@@ -121,27 +116,27 @@ sealed class Isosurface : MonoBehaviour
         _volumeGenerator.SetInts("Dims", _dimensions);
         _volumeGenerator.SetFloat("Scale", _gridScale);
         _volumeGenerator.SetFloat("Time", Time.time);
-        _volumeGenerator.SetBuffer(0, "Voxels", _voxelBuffer);
+        _volumeGenerator.SetBuffer(0, "Voxels", _buffer.voxel);
         _volumeGenerator.DispatchThreads(0, _dimensions);
 
-        _triangleBuffer.SetCounterValue(0);
+        _buffer.triangle.SetCounterValue(0);
 
         _meshConstructor.SetInts("Dims", _dimensions);
         _meshConstructor.SetInt("MaxTriangle", _triangleBudget);
         _meshConstructor.SetFloat("IsoValue", _targetValue);
-        _meshConstructor.SetBuffer(0, "TriangleTable", _tableBuffer);
-        _meshConstructor.SetBuffer(0, "Voxels", _voxelBuffer);
-        _meshConstructor.SetBuffer(0, "Output", _triangleBuffer);
+        _meshConstructor.SetBuffer(0, "TriangleTable", _buffer.table);
+        _meshConstructor.SetBuffer(0, "Voxels", _buffer.voxel);
+        _meshConstructor.SetBuffer(0, "Output", _buffer.triangle);
         _meshConstructor.DispatchThreads(0, _dimensions);
 
-        ComputeBuffer.CopyCount(_triangleBuffer, _countBuffer, 0);
+        ComputeBuffer.CopyCount(_buffer.triangle, _buffer.count, 0);
 
         _meshConverter.SetInts("Dims", _dimensions);
         _meshConverter.SetFloat("Scale", _gridScale);
-        _meshConverter.SetBuffer(0, "Input", _triangleBuffer);
-        _meshConverter.SetBuffer(0, "Count", _countBuffer);
-        _meshConverter.SetBuffer(0, "VertexBuffer", _vertexBuffer);
-        _meshConverter.SetBuffer(0, "IndexBuffer", _indexBuffer);
+        _meshConverter.SetBuffer(0, "Input", _buffer.triangle);
+        _meshConverter.SetBuffer(0, "Count", _buffer.count);
+        _meshConverter.SetBuffer(0, "VertexBuffer", _surface.vertices);
+        _meshConverter.SetBuffer(0, "IndexBuffer", _surface.indices);
         _meshConverter.DispatchThreads(0, _triangleBudget, 1, 1);
     }
 
