@@ -265,4 +265,4 @@ static class PrecalculatedData
     };
 }
 
-} // namespace MarchingCube
+} // namespace MarchingCubes
