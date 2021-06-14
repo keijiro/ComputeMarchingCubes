@@ -22,4 +22,9 @@ Triangle MakeTriangle(Point v1, Point v2, Point v3)
     return temp;
 }
 
+#define sizeof_uint 4
+#define sizeof_float 4
+#define sizeof_float3 12
+#define sizeof_Point 24
+
 #endif

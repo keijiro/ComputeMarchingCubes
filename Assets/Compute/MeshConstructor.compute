@@ -1,16 +1,18 @@
 #pragma kernel MeshConstructor
+#pragma kernel MeshFinisher
 
 #include "Common.hlsl"
 
 // Parameters
-uint MaxTriangle;
 uint3 Dims;
+uint MaxTriangle;
+float Scale;
 float IsoValue;
 
-// Output triangle buffer
-RWStructuredBuffer<Triangle> Output;
-
+//
 // Triangle look up table for each cube configuration
+//
+
 StructuredBuffer<uint2> TriangleTable;
 
 uint VertexFromTriangleTable(uint2 data, uint index)
@@ -19,7 +21,10 @@ uint VertexFromTriangleTable(uint2 data, uint index)
                                data.y >> ((index - 8) * 4));
 }
 
-// Input voxel
+//
+// Input voxels
+//
+
 StructuredBuffer<float> Voxels;
 
 float VoxelValue(uint x, uint y, uint z)
@@ -44,7 +49,33 @@ float4 VoxelSample(uint3 i)
     return float4(v_px - v_nx, v_py - v_ny, v_pz - v_nz, v);
 }
 
+//
+// Output buffer and counter
+//
+
+RWByteAddressBuffer VertexBuffer;
+RWByteAddressBuffer IndexBuffer;
+RWStructuredBuffer<uint> Counter;
+
+// Vertex buffer accessor
+void WriteVertex(uint offset, Point p)
+{
+    uint addr_p = offset * sizeof_Point;
+    uint addr_n = addr_p + sizeof_float3;
+    VertexBuffer.Store3(addr_p, asuint(p.p));
+    VertexBuffer.Store3(addr_n, asuint(p.n));
+}
+
+// Index buffer accessor
+void WriteIndices(uint offset, uint3 indices)
+{
+    IndexBuffer.Store3(offset * sizeof_uint, indices);
+}
+
+//
 // Cube helper functions
+//
+
 uint3 CubeVertex(uint index)
 {
     bool x = index & 1;
@@ -65,6 +96,7 @@ uint2 EdgeVertexPair(uint index)
 //
 // Marching cube kernel function
 //
+
 [numthreads(4, 4, 4)]
 void MeshConstructor(uint3 id : SV_DispatchThreadID)
 {
@@ -100,20 +132,41 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
         float3 p = lerp(vertex1, vertex2, param);
         float3 n = normalize(lerp(sample1.xyz, sample2.xyz, param));
 
+        p = Scale * (p + 0.5 - Dims / 2);
+
         points[i] = MakePoint(p, n);
     }
 
+    // Output triangles in the selected cube configuration.
     uint2 tri_data = TriangleTable[selector];
     for (i = 0; i < 15; i += 3)
     {
         uint v1 = VertexFromTriangleTable(tri_data, i);
-        uint v2 = VertexFromTriangleTable(tri_data, i + 2);
-        uint v3 = VertexFromTriangleTable(tri_data, i + 1);
+        uint v2 = VertexFromTriangleTable(tri_data, i + 1);
+        uint v3 = VertexFromTriangleTable(tri_data, i + 2);
         if (v1 == 15) return;
 
-        uint count = Output.IncrementCounter();
+        uint count = Counter.IncrementCounter();
         if (count >= MaxTriangle) return;
 
-        Output[count] = MakeTriangle(points[v1], points[v2], points[v3]);
+        uint vidx = count * 3;
+        WriteVertex(vidx + 0, points[v1]);
+        WriteVertex(vidx + 1, points[v2]);
+        WriteVertex(vidx + 2, points[v3]);
+        WriteIndices(vidx, uint3(vidx, vidx + 2, vidx + 1));
+    }
+}
+
+[numthreads(64, 1, 1)]
+void MeshFinisher(uint id : SV_DispatchThreadID)
+{
+    uint count = Counter.IncrementCounter();
+    if (count < MaxTriangle)
+    {
+        uint vidx = count * 3;
+        WriteVertex(vidx + 0, MakePoint(0, 0));
+        WriteVertex(vidx + 1, MakePoint(0, 0));
+        WriteVertex(vidx + 2, MakePoint(0, 0));
+        WriteIndices(vidx, uint3(0, 0, 0));
     }
 }
