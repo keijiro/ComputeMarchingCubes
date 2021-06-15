@@ -56,7 +56,7 @@ sealed class MeshBuilder : System.IDisposable
         _compute.SetInts("Dims", _grids);
         _compute.SetInt("MaxTriangle", _triangleBudget);
         _compute.SetFloat("Scale", scale);
-        _compute.SetFloat("IsoValue", target);
+        _compute.SetFloat("Isovalue", target);
         _compute.SetBuffer(0, "TriangleTable", _triangleTable);
         _compute.SetBuffer(0, "Voxels", voxels);
         _compute.SetBuffer(0, "VertexBuffer", _vertexBuffer);

@@ -1,0 +1,184 @@
+#pragma kernel MeshReconstruction
+#pragma kernel ClearUnused
+
+// Workaround for the absence of sizeof operator in HLSL
+#define SIZEOF_UINT 4
+#define SIZEOF_FLOAT3 12
+
+// Parameters
+uint3 Dims;
+uint MaxTriangle;
+float Scale;
+float Isovalue;
+
+// Grid space to object space transformation
+float3 TransformPoint(float3 p)
+{
+    return (p + 0.5 - Dims / 2) * Scale;
+}
+
+//
+// "Triangle table" that contains triangle lists for each cube configuration
+//
+
+StructuredBuffer<uint2> TriangleTable;
+
+uint EdgeIndexFromTriangleTable(uint2 data, uint index)
+{
+    return 0xfu & (index < 8 ? data.x >> ((index + 0) * 4) :
+                               data.y >> ((index - 8) * 4));
+}
+
+//
+// Input voxels
+//
+
+StructuredBuffer<float> Voxels;
+
+float VoxelValue(uint x, uint y, uint z)
+{
+    return Voxels[x + Dims.x * (y + Dims.y * z)];
+}
+
+// Voxel value with calculated gradient
+float4 VoxelValueWithGradient(uint3 i)
+{
+    uint3 i_n = max(i, 1) - 1;
+    uint3 i_p = min(i + 1, Dims - 1);
+    float v = VoxelValue(i.x, i.y, i.z);
+    float v_nx = VoxelValue(i_n.x, i.y, i.z);
+    float v_px = VoxelValue(i_p.x, i.y, i.z);
+    float v_ny = VoxelValue(i.x, i_n.y, i.z);
+    float v_py = VoxelValue(i.x, i_p.y, i.z);
+    float v_nz = VoxelValue(i.x, i.y, i_n.z);
+    float v_pz = VoxelValue(i.x, i.y, i_p.z);
+    return float4(v_px - v_nx, v_py - v_ny, v_pz - v_nz, v);
+}
+
+//
+// Output buffer and counter
+//
+
+RWByteAddressBuffer VertexBuffer;
+RWByteAddressBuffer IndexBuffer;
+RWStructuredBuffer<uint> Counter; // used only for counting
+
+// Vertex buffer accessor
+void WriteVertex(uint offset, float3 p, float3 n)
+{
+    uint addr_p = offset * SIZEOF_FLOAT3 * 2;
+    uint addr_n = addr_p + SIZEOF_FLOAT3;
+    VertexBuffer.Store3(addr_p, asuint(p));
+    VertexBuffer.Store3(addr_n, asuint(n));
+}
+
+// Index buffer accessor
+void WriteIndices(uint offset, uint3 indices)
+{
+    IndexBuffer.Store3(offset * SIZEOF_UINT, indices);
+}
+
+//
+// Cube geometry/topology
+//
+
+// This must match one defined in Paul Bourke's article:
+// http://paulbourke.net/geometry/polygonise/
+
+uint3 CubeVertex(uint index)
+{
+    bool x = index & 1;
+    bool y = index & 2;
+    bool z = index & 4;
+    return uint3(x ^ y, y, z);
+}
+
+uint2 EdgeVertexPair(uint index)
+{
+    // (0, 1) (1, 2) (2, 3) (3, 0)
+    // (4, 5) (5, 6) (6, 7) (7, 4)
+    // (0, 4) (1, 5) (2, 6) (3, 7)
+    uint v1 = index & 7;
+    uint v2 = index < 8 ? ((index + 1) & 3) | (index & 4) : v1 + 4;
+    return uint2(v1, v2);
+}
+
+//
+// Marching cube mesh reconstruction kernel
+//
+
+[numthreads(4, 4, 4)]
+void MeshReconstruction(uint3 id : SV_DispatchThreadID)
+{
+    // Boundary check
+    if (any(id + 1 >= Dims.xyz)) return;
+
+    // Voxel samples at each cube vertex
+    float4 samples[8];
+    for (uint i = 0; i < 8; i++)
+        samples[i] = VoxelValueWithGradient(id + CubeVertex(i));
+
+    // Cube configuration selector
+    // (initialized as a bit field of vertex binary states)
+    uint selector = 0;
+    for (i = 0; i < 8; i++)
+        selector |= (samples[i].w < Isovalue) << i;
+
+    // Special case for empty cubes; Exit ealy if there is no intersection.
+    if (selector == 0 || selector == 0xff) return;
+
+    // Intersection points on each edge
+    // We do this in a GPU-oriented way; Do the calculation on all the edges
+    // including ones without an intersection.
+    float3 vertices[12];
+    float3 normals[12];
+    for (i = 0; i < 12; i++)
+    {
+        uint2 pair = EdgeVertexPair(i);
+        float4 sample1 = samples[pair.x];
+        float4 sample2 = samples[pair.y];
+        float3 vertex1 = id + CubeVertex(pair.x);
+        float3 vertex2 = id + CubeVertex(pair.y);
+        float param = (Isovalue - sample1.w) / (sample2.w - sample1.w);
+        vertices[i] = TransformPoint(lerp(vertex1, vertex2, param));
+        normals[i] = -normalize(lerp(sample1.xyz, sample2.xyz, param));
+    }
+
+    // Output triangles in the selected cube configuration.
+    uint2 tri_data = TriangleTable[selector];
+    for (i = 0; i < 15; i += 3)
+    {
+        uint e1 = EdgeIndexFromTriangleTable(tri_data, i);
+        uint e2 = EdgeIndexFromTriangleTable(tri_data, i + 1);
+        uint e3 = EdgeIndexFromTriangleTable(tri_data, i + 2);
+        if (e1 == 15) return;
+
+        uint count = Counter.IncrementCounter();
+        if (count >= MaxTriangle) return;
+
+        uint vidx = count * 3;
+        WriteVertex(vidx + 0, vertices[e1], normals[e1]);
+        WriteVertex(vidx + 1, vertices[e2], normals[e2]);
+        WriteVertex(vidx + 2, vertices[e3], normals[e3]);
+        WriteIndices(vidx, uint3(vidx, vidx + 1, vidx + 2));
+    }
+}
+
+//
+// Cleanup kernel that clears the unused area of the buffers
+//
+
+[numthreads(64, 1, 1)]
+void ClearUnused(uint id : SV_DispatchThreadID)
+{
+    while (true)
+    {
+        uint count = Counter.IncrementCounter();
+        if (count >= MaxTriangle) break;
+        uint vidx = count * 3;
+        WriteVertex(vidx + 0, 0, 0);
+        WriteVertex(vidx + 1, 0, 0);
+        WriteVertex(vidx + 2, 0, 0);
+        WriteIndices(vidx, uint3(0, 0, 0));
+    }
+}
