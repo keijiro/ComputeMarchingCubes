@@ -1,9 +1,8 @@
 ComputeMarchingCubes
 ====================
 
-![gif](https://user-images.githubusercontent.com/343936/121985549-ea6f0200-cdcf-11eb-9cf9-2ba2999b5dfe.gif)
-
-![gif](https://user-images.githubusercontent.com/343936/121985560-f1961000-cdcf-11eb-89db-f3619a97855f.gif)
+![gif](https://user-images.githubusercontent.com/343936/121985718-420d6d80-cdd0-11eb-9f2f-04ed15d925c5.gif)
+![gif](https://user-images.githubusercontent.com/343936/121985721-43d73100-cdd0-11eb-89e4-3801387ac88d.gif)
 
 **ComputeMarchingCubes** is a Unity sample project that reconstructs
 isosurfaces of scalar volume data using a compute shader and the [new mesh API]
