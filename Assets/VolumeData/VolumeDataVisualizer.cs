@@ -7,10 +7,9 @@ sealed class VolumeDataVisualizer : MonoBehaviour
     #region Editable attributes
 
     [SerializeField] TextAsset _volumeData = null;
-    [SerializeField] Vector3Int _dimensions = new Vector3Int(64, 32, 64);
-    [SerializeField] float _gridScale = 4.0f / 64;
-    [SerializeField] int _triangleBudget = 65536;
-    [SerializeField] float _targetValue = 0;
+    [SerializeField] Vector3Int _dimensions = new Vector3Int(256, 256, 113);
+    [SerializeField] float _gridScale = 4.0f / 256;
+    [SerializeField] int _triangleBudget = 65536 * 16;
 
     #endregion
 
@@ -21,37 +20,39 @@ sealed class VolumeDataVisualizer : MonoBehaviour
 
     #endregion
 
-    #region Volume data conversion
+    #region Target isovalue
 
-    void ConvertVolumeData()
+    public float TargetValue { get; set; } = 0.4f;
+    float _builtTargetValue;
+
+    #endregion
+
+    #region Private members
+
+    int VoxelCount => _dimensions.x * _dimensions.y * _dimensions.z;
+    ComputeBuffer _voxelBuffer;
+    MeshBuilder _builder;
+
+    #endregion
+
+    #region MonoBehaviour implementation
+
+    void Start()
     {
-        using var readBuffer = new ComputeBuffer(256 * 256 * 113 / 2, sizeof(uint));
+        _voxelBuffer = new ComputeBuffer(VoxelCount, sizeof(float));
+
+        _builder = new MeshBuilder
+          (_dimensions.x, _dimensions.y, _dimensions.z,
+           _triangleBudget, _builderCompute);
+
+        // Voxel data conversion (ushort -> float)
+        using var readBuffer = new ComputeBuffer(VoxelCount / 2, sizeof(uint));
         readBuffer.SetData(_volumeData.bytes);
 
         _converterCompute.SetInts("Dims", _dimensions);
         _converterCompute.SetBuffer(0, "Source", readBuffer);
         _converterCompute.SetBuffer(0, "Voxels", _voxelBuffer);
         _converterCompute.DispatchThreads(0, _dimensions);
-    }
-
-    #endregion
-
-    #region MonoBehaviour implementation
-
-    ComputeBuffer _voxelBuffer;
-    MeshBuilder _builder;
-
-    void Start()
-    {
-        var voxelCount = _dimensions.x * _dimensions.y * _dimensions.z;
-        _voxelBuffer = new ComputeBuffer(voxelCount, sizeof(float));
-
-        ConvertVolumeData();
-
-        _builder = new MeshBuilder(_dimensions.x, _dimensions.y, _dimensions.z,
-                                   _triangleBudget, _builderCompute);
-
-        GetComponent<MeshFilter>().sharedMesh = _builder.Mesh;
     }
 
     void OnDestroy()
@@ -61,7 +62,13 @@ sealed class VolumeDataVisualizer : MonoBehaviour
     }
 
     void Update()
-      => _builder.BuildIsosurface(_voxelBuffer, _targetValue, _gridScale);
+    {
+        // Rebuild the isosurface only when the target value has been changed.
+        if (TargetValue == _builtTargetValue) return;
+        _builder.BuildIsosurface(_voxelBuffer, TargetValue, _gridScale);
+        GetComponent<MeshFilter>().sharedMesh = _builder.Mesh;
+        _builtTargetValue = TargetValue;
+    }
 
     #endregion
 }

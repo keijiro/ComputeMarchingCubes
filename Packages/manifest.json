@@ -9,6 +9,7 @@
     }
   ],
   "dependencies": {
+    "com.unity.ugui": "1.0.0",
     "jp.keijiro.noiseshader": "2.0.0",
     "jp.keijiro.test-assets": "1.0.1"
   }
