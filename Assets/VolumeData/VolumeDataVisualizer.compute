@@ -1,11 +1,11 @@
-#pragma kernel ConvertVolumeData
+#pragma kernel VolumeDataConverter
 
 uint3 Dims;
 ByteAddressBuffer Source;
 RWStructuredBuffer<float> Voxels;
 
 [numthreads(8, 8, 8)]
-void ConvertVolumeData(uint3 id : SV_DispatchThreadID)
+void VolumeDataConverter(uint3 id : SV_DispatchThreadID)
 {
     uint index = id.x + Dims.x * (id.y + Dims.y * id.z);
 
