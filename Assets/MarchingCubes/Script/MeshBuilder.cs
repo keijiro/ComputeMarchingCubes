@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 namespace MarchingCubes {
 
 //
-// MeshBuilder for isosurface reconstruction with the marching cubes algorithm
+// Isosurface mesh builder with the marching cubes algorithm
 //
 sealed class MeshBuilder : System.IDisposable
 {
@@ -12,29 +12,29 @@ sealed class MeshBuilder : System.IDisposable
 
     public Mesh Mesh => _mesh;
 
-    public MeshBuilder(Vector3Int dims, int budget, ComputeShader compute)
-    {
-        _grids = (dims.x, dims.y, dims.z);
-        _triangleBudget = budget;
-        _compute = compute;
-
-        AllocateBuffers();
-        AllocateMesh(3 * _triangleBudget);
-    }
-
     public MeshBuilder(int x, int y, int z, int budget, ComputeShader compute)
-    {
-        _grids = (x, y, z);
-        _triangleBudget = budget;
-        _compute = compute;
+      => Initialize((x, y, z), budget, compute);
 
-        AllocateBuffers();
-        AllocateMesh(3 * _triangleBudget);
-    }
+    public MeshBuilder(Vector3Int dims, int budget, ComputeShader compute)
+      => Initialize((dims.x, dims.y, dims.z), budget, compute);
+
+    public void Dispose()
+      => ReleaseAll();
+
+    public void BuildIsosurface(ComputeBuffer voxels, float target, float scale)
+      => RunCompute(voxels, target, scale);
+
+    #endregion
+
+    #region Private members
+
+    (int x, int y, int z) _grids;
+    int _triangleBudget;
+    ComputeShader _compute;
 
     void Initialize((int, int, int) dims, int budget, ComputeShader compute)
     {
-        _grids = (dims.Item1, dims.Item2, dims.Item3);
+        _grids = dims;
         _triangleBudget = budget;
         _compute = compute;
 
@@ -42,13 +42,13 @@ sealed class MeshBuilder : System.IDisposable
         AllocateMesh(3 * _triangleBudget);
     }
 
-    public void Dispose()
+    void ReleaseAll()
     {
         ReleaseBuffers();
         ReleaseMesh();
     }
 
-    public void BuildIsosurface(ComputeBuffer voxels, float target, float scale)
+    void RunCompute(ComputeBuffer voxels, float target, float scale)
     {
         _counterBuffer.SetCounterValue(0);
 
@@ -64,24 +64,16 @@ sealed class MeshBuilder : System.IDisposable
         _compute.SetBuffer(0, "Counter", _counterBuffer);
         _compute.DispatchThreads(0, _grids);
 
-        // Buffer padding
+        // Clear unused area of the buffers.
         _compute.SetBuffer(1, "VertexBuffer", _vertexBuffer);
         _compute.SetBuffer(1, "IndexBuffer", _indexBuffer);
         _compute.SetBuffer(1, "Counter", _counterBuffer);
-        _compute.DispatchThreads(1, _triangleBudget, 1, 1);
+        _compute.DispatchThreads(1, 1, 1, 1);
 
         // Bounding box
         var ext = new Vector3(_grids.x, _grids.y, _grids.z) * scale;
         _mesh.bounds = new Bounds(Vector3.zero, ext);
     }
-
-    #endregion
-
-    #region Private variables
-
-    (int x, int y, int z) _grids;
-    int _triangleBudget;
-    ComputeShader _compute;
 
     #endregion
 

@@ -144,10 +144,10 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
         uint v1 = VertexFromTriangleTable(tri_data, i);
         uint v2 = VertexFromTriangleTable(tri_data, i + 1);
         uint v3 = VertexFromTriangleTable(tri_data, i + 2);
-        if (v1 == 15) return;
+        if (v1 == 15) break;
 
         uint count = Counter.IncrementCounter();
-        if (count >= MaxTriangle) return;
+        if (count >= MaxTriangle) break;
 
         uint vidx = count * 3;
         WriteVertex(vidx + 0, points[v1]);
@@ -160,9 +160,11 @@ void MeshConstructor(uint3 id : SV_DispatchThreadID)
 [numthreads(64, 1, 1)]
 void MeshFinisher(uint id : SV_DispatchThreadID)
 {
-    uint count = Counter.IncrementCounter();
-    if (count < MaxTriangle)
+    while (true)
     {
+        uint count = Counter.IncrementCounter();
+        if (count >=MaxTriangle) break;
+
         uint vidx = count * 3;
         WriteVertex(vidx + 0, MakePoint(0, 0));
         WriteVertex(vidx + 1, MakePoint(0, 0));
