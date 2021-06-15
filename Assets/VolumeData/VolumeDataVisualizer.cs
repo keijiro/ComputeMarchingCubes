@@ -30,6 +30,7 @@ sealed class VolumeDataVisualizer : MonoBehaviour
     #region Private members
 
     int VoxelCount => _dimensions.x * _dimensions.y * _dimensions.z;
+
     ComputeBuffer _voxelBuffer;
     MeshBuilder _builder;
 
@@ -40,10 +41,7 @@ sealed class VolumeDataVisualizer : MonoBehaviour
     void Start()
     {
         _voxelBuffer = new ComputeBuffer(VoxelCount, sizeof(float));
-
-        _builder = new MeshBuilder
-          (_dimensions.x, _dimensions.y, _dimensions.z,
-           _triangleBudget, _builderCompute);
+        _builder = new MeshBuilder(_dimensions, _triangleBudget, _builderCompute);
 
         // Voxel data conversion (ushort -> float)
         using var readBuffer = new ComputeBuffer(VoxelCount / 2, sizeof(uint));
@@ -65,8 +63,10 @@ sealed class VolumeDataVisualizer : MonoBehaviour
     {
         // Rebuild the isosurface only when the target value has been changed.
         if (TargetValue == _builtTargetValue) return;
+
         _builder.BuildIsosurface(_voxelBuffer, TargetValue, _gridScale);
         GetComponent<MeshFilter>().sharedMesh = _builder.Mesh;
+
         _builtTargetValue = TargetValue;
     }
 

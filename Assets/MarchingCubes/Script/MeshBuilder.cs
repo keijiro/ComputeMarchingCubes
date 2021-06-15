@@ -12,9 +12,29 @@ sealed class MeshBuilder : System.IDisposable
 
     public Mesh Mesh => _mesh;
 
+    public MeshBuilder(Vector3Int dims, int budget, ComputeShader compute)
+    {
+        _grids = (dims.x, dims.y, dims.z);
+        _triangleBudget = budget;
+        _compute = compute;
+
+        AllocateBuffers();
+        AllocateMesh(3 * _triangleBudget);
+    }
+
     public MeshBuilder(int x, int y, int z, int budget, ComputeShader compute)
     {
         _grids = (x, y, z);
+        _triangleBudget = budget;
+        _compute = compute;
+
+        AllocateBuffers();
+        AllocateMesh(3 * _triangleBudget);
+    }
+
+    void Initialize((int, int, int) dims, int budget, ComputeShader compute)
+    {
+        _grids = (dims.Item1, dims.Item2, dims.Item3);
         _triangleBudget = budget;
         _compute = compute;
 

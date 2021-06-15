@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace MarchingCubes {
 
-sealed class NoiseField : MonoBehaviour
+sealed class NoiseFieldVisualizer : MonoBehaviour
 {
     #region Editable attributes
 
@@ -20,20 +20,21 @@ sealed class NoiseField : MonoBehaviour
 
     #endregion
 
-    #region MonoBehaviour implementation
+    #region Private members
+
+    int VoxelCount => _dimensions.x * _dimensions.y * _dimensions.z;
 
     ComputeBuffer _voxelBuffer;
     MeshBuilder _builder;
 
+    #endregion
+
+    #region MonoBehaviour implementation
+
     void Start()
     {
-        var voxelCount = _dimensions.x * _dimensions.y * _dimensions.z;
-        _voxelBuffer = new ComputeBuffer(voxelCount, sizeof(float));
-
-        _builder = new MeshBuilder(_dimensions.x, _dimensions.y, _dimensions.z,
-                                   _triangleBudget, _builderCompute);
-
-        GetComponent<MeshFilter>().sharedMesh = _builder.Mesh;
+        _voxelBuffer = new ComputeBuffer(VoxelCount, sizeof(float));
+        _builder = new MeshBuilder(_dimensions, _triangleBudget, _builderCompute);
     }
 
     void OnDestroy()
@@ -44,13 +45,16 @@ sealed class NoiseField : MonoBehaviour
 
     void Update()
     {
+        // Noise field update
         _volumeCompute.SetInts("Dims", _dimensions);
         _volumeCompute.SetFloat("Scale", _gridScale);
         _volumeCompute.SetFloat("Time", Time.time);
         _volumeCompute.SetBuffer(0, "Voxels", _voxelBuffer);
         _volumeCompute.DispatchThreads(0, _dimensions);
 
+        // Isosurface reconstruction
         _builder.BuildIsosurface(_voxelBuffer, _targetValue, _gridScale);
+        GetComponent<MeshFilter>().sharedMesh = _builder.Mesh;
     }
 
     #endregion
