@@ -68,7 +68,7 @@ sealed class MeshBuilder : System.IDisposable
         _compute.SetBuffer(1, "VertexBuffer", _vertexBuffer);
         _compute.SetBuffer(1, "IndexBuffer", _indexBuffer);
         _compute.SetBuffer(1, "Counter", _counterBuffer);
-        _compute.DispatchThreads(1, 1, 1, 1);
+        _compute.DispatchThreads(1, 1024, 1, 1);
 
         // Bounding box
         var ext = new Vector3(_grids.x, _grids.y, _grids.z) * scale;
