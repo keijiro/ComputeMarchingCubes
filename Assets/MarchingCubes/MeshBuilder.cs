@@ -78,21 +78,16 @@ sealed class MeshBuilder : System.IDisposable
 
     #region Compute buffer objects
 
-    ComputeBuffer _triangleTable;
     ComputeBuffer _counterBuffer;
 
     void AllocateBuffers()
     {
-        // Marching cubes triangle table
-        _triangleTable = new ComputeBuffer(256, sizeof(ulong));
-
         // Buffer for triangle counting
         _counterBuffer = new ComputeBuffer(1, 4, ComputeBufferType.Counter);
     }
 
     void ReleaseBuffers()
     {
-        _triangleTable.Dispose();
         _counterBuffer.Dispose();
     }
 
