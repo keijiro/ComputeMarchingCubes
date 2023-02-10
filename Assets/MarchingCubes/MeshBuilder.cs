@@ -57,7 +57,6 @@ sealed class MeshBuilder : System.IDisposable
         _compute.SetInt("MaxTriangle", _triangleBudget);
         _compute.SetFloat("Scale", scale);
         _compute.SetFloat("Isovalue", target);
-        _compute.SetBuffer(0, "TriangleTable", _triangleTable);
         _compute.SetBuffer(0, "Voxels", voxels);
         _compute.SetBuffer(0, "VertexBuffer", _vertexBuffer);
         _compute.SetBuffer(0, "IndexBuffer", _indexBuffer);
@@ -79,22 +78,16 @@ sealed class MeshBuilder : System.IDisposable
 
     #region Compute buffer objects
 
-    ComputeBuffer _triangleTable;
     ComputeBuffer _counterBuffer;
 
     void AllocateBuffers()
     {
-        // Marching cubes triangle table
-        _triangleTable = new ComputeBuffer(256, sizeof(ulong));
-        _triangleTable.SetData(PrecalculatedData.TriangleTable);
-
         // Buffer for triangle counting
         _counterBuffer = new ComputeBuffer(1, 4, ComputeBufferType.Counter);
     }
 
     void ReleaseBuffers()
     {
-        _triangleTable.Dispose();
         _counterBuffer.Dispose();
     }
 
