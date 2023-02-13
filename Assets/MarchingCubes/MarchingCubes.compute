@@ -1,10 +1,6 @@
 #pragma kernel MeshReconstruction
 #pragma kernel ClearUnused
 
-// Workaround for the absence of sizeof operator in HLSL
-#define SIZEOF_UINT 4
-#define SIZEOF_FLOAT3 12
-
 // Parameters
 uint3 Dims;
 uint MaxTriangle;
@@ -323,7 +319,7 @@ struct VertexAttributes {
 };
 
 RWStructuredBuffer<VertexAttributes> VertexBuffer;
-RWByteAddressBuffer IndexBuffer;
+RWStructuredBuffer<uint3> IndexBuffer;
 RWStructuredBuffer<uint> Counter; // used only for counting
 
 // Vertex buffer accessor
@@ -338,7 +334,7 @@ void WriteVertex(uint offset, float3 p, float3 n)
 // Index buffer accessor
 void WriteIndices(uint offset, uint3 indices)
 {
-    IndexBuffer.Store3(offset * SIZEOF_UINT, indices);
+    IndexBuffer[offset] = indices;
 }
 
 //
@@ -423,7 +419,7 @@ void MeshReconstruction(uint3 id : SV_DispatchThreadID)
         WriteVertex(vidx + 0, vertices[e1], normals[e1]);
         WriteVertex(vidx + 1, vertices[e2], normals[e2]);
         WriteVertex(vidx + 2, vertices[e3], normals[e3]);
-        WriteIndices(vidx, uint3(vidx, vidx + 1, vidx + 2));
+        WriteIndices(count, uint3(vidx, vidx + 1, vidx + 2));
     }
 }
 
@@ -442,6 +438,6 @@ void ClearUnused(uint id : SV_DispatchThreadID)
         WriteVertex(vidx + 0, 0, 0);
         WriteVertex(vidx + 1, 0, 0);
         WriteVertex(vidx + 2, 0, 0);
-        WriteIndices(vidx, uint3(0, 0, 0));
+        WriteIndices(count, uint3(0, 0, 0));
     }
 }

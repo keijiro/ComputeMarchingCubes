@@ -102,10 +102,9 @@ sealed class MeshBuilder : System.IDisposable
     void AllocateMesh(int vertexCount)
     {
         _mesh = new Mesh();
-
-        // We want IndexBuffer access as Raw (ByteAddress) buffers.
-        _mesh.indexBufferTarget |= GraphicsBuffer.Target.Raw;
-        // We want VertexBuffer access as Structured buffers.
+            
+        // We want GraphicsBuffer access as Structured buffers.
+        _mesh.indexBufferTarget |= GraphicsBuffer.Target.Structured;
         _mesh.vertexBufferTarget |= GraphicsBuffer.Target.Structured;
 
         // Vertex position: float32 x 3
