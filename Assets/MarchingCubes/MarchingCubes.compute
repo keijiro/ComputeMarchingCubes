@@ -317,17 +317,22 @@ float4 VoxelValueWithGradient(uint3 i)
 // Output buffer and counter
 //
 
-RWByteAddressBuffer VertexBuffer;
+struct VertexAttributes {
+    float3 position;
+    float3 normal;
+};
+
+RWStructuredBuffer<VertexAttributes> VertexBuffer;
 RWByteAddressBuffer IndexBuffer;
 RWStructuredBuffer<uint> Counter; // used only for counting
 
 // Vertex buffer accessor
 void WriteVertex(uint offset, float3 p, float3 n)
 {
-    uint addr_p = offset * SIZEOF_FLOAT3 * 2;
-    uint addr_n = addr_p + SIZEOF_FLOAT3;
-    VertexBuffer.Store3(addr_p, asuint(p));
-    VertexBuffer.Store3(addr_n, asuint(n));
+    VertexAttributes vertex;
+    vertex.position = p;
+    vertex.normal = n;
+    VertexBuffer[offset] = vertex;
 }
 
 // Index buffer accessor
