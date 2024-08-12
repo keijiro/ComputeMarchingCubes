@@ -55,7 +55,7 @@ sealed class VolumeDataVisualizer : MonoBehaviour
         _converterCompute.DispatchThreads(0, _dimensions);
 
         // UI data source
-        GetComponent<UIDocument>().rootVisualElement.dataSource = this;
+        FindFirstObjectByType<UIDocument>().rootVisualElement.dataSource = this;
     }
 
     void OnDestroy()

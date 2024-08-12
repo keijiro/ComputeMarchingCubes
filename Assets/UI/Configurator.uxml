@@ -1,5 +1,6 @@
 <engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
     <Style src="project://database/Assets/UI/Configurator.uss?fileID=7433441132597879392&amp;guid=d1f8362fc5c0642f89b93581bfb5ced2&amp;type=3#Configurator" />
+    <engine:VisualElement name="empty-area" style="flex-grow: 1;" />
     <engine:VisualElement name="container" data-source-type="MarchingCubes.VolumeDataVisualizer, Assembly-CSharp" style="max-width: 300px; position: absolute; top: 12px; right: 12px; width: 100%;">
         <engine:VisualElement name="density-labels">
             <engine:Label text="Isovalue" />
