@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.UIElements;
+using Unity.Properties;
 
 namespace MarchingCubes {
 
@@ -22,7 +24,7 @@ sealed class VolumeDataVisualizer : MonoBehaviour
 
     #region Target isovalue
 
-    public float TargetValue { get; set; } = 0.4f;
+    [CreateProperty] public float TargetValue { get; set; } = 0.4f;
     float _builtTargetValue;
 
     #endregion
@@ -51,6 +53,9 @@ sealed class VolumeDataVisualizer : MonoBehaviour
         _converterCompute.SetBuffer(0, "Source", readBuffer);
         _converterCompute.SetBuffer(0, "Voxels", _voxelBuffer);
         _converterCompute.DispatchThreads(0, _dimensions);
+
+        // UI data source
+        GetComponent<UIDocument>().rootVisualElement.dataSource = this;
     }
 
     void OnDestroy()

@@ -1,0 +1,18 @@
+<engine:UXML xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:engine="UnityEngine.UIElements" xmlns:editor="UnityEditor.UIElements" noNamespaceSchemaLocation="../UIElementsSchema/UIElements.xsd" editor-extension-mode="False">
+    <Style src="project://database/Assets/UI/Configurator.uss?fileID=7433441132597879392&amp;guid=d1f8362fc5c0642f89b93581bfb5ced2&amp;type=3#Configurator" />
+    <engine:VisualElement name="container" data-source-type="MarchingCubes.VolumeDataVisualizer, Assembly-CSharp" style="max-width: 300px; position: absolute; top: 12px; right: 12px; width: 100%;">
+        <engine:VisualElement name="density-labels">
+            <engine:Label text="Isovalue" />
+            <engine:Label text="0.5" style="position: absolute; -unity-text-align: upper-right; right: 0;">
+                <Bindings>
+                    <engine:DataBinding property="text" data-source-path="TargetValue" binding-mode="ToTarget" />
+                </Bindings>
+            </engine:Label>
+        </engine:VisualElement>
+        <engine:Slider high-value="1" name="density-slider" fill="true">
+            <Bindings>
+                <engine:DataBinding property="value" data-source-path="TargetValue" binding-mode="TwoWay" />
+            </Bindings>
+        </engine:Slider>
+    </engine:VisualElement>
+</engine:UXML>

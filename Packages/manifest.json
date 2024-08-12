@@ -9,9 +9,8 @@
     }
   ],
   "dependencies": {
+    "com.unity.modules.uielements": "1.0.0",
     "com.unity.render-pipelines.universal": "17.0.3",
-    "com.unity.ugui": "2.0.0",
-    "jp.keijiro.noiseshader": "2.0.0",
-    "jp.keijiro.test-assets": "1.0.1"
+    "jp.keijiro.noiseshader": "2.0.0"
   }
 }
