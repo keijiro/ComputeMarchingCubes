@@ -21,7 +21,7 @@ GPU optimization.
 System requirements
 -------------------
 
-- Unity 2021.2.0 a19 or later
+- Unity 6
 - Compute shader capable system
 
 What's inside
