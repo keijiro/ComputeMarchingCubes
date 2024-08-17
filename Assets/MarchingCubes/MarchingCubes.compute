@@ -1,10 +1,6 @@
 #pragma kernel MeshReconstruction
 #pragma kernel ClearUnused
 
-// Workaround for the absence of sizeof operator in HLSL
-#define SIZEOF_UINT 4
-#define SIZEOF_FLOAT3 12
-
 // Parameters
 uint3 Dims;
 uint MaxTriangle;
@@ -20,9 +16,267 @@ float3 TransformPoint(float3 p)
 //
 // "Triangle table" that contains triangle lists for each cube configuration
 //
-
-StructuredBuffer<uint2> TriangleTable;
-
+// Generated from Paul Bourke's table
+// http://paulbourke.net/geometry/polygonise/
+static const uint2 TriangleTable[] =
+{
+        uint2(0xffffffff, 0xffffffff),
+        uint2(0xfffff380, 0xffffffff),
+        uint2(0xfffff910, 0xffffffff),
+        uint2(0xff189381, 0xffffffff),
+        uint2(0xfffffa21, 0xffffffff),
+        uint2(0xffa21380, 0xffffffff),
+        uint2(0xff920a29, 0xffffffff),
+        uint2(0x9a8a2382, 0xfffffff8),
+        uint2(0xfffff2b3, 0xffffffff),
+        uint2(0xff0b82b0, 0xffffffff),
+        uint2(0xffb32091, 0xffffffff),
+        uint2(0x89b912b1, 0xfffffffb),
+        uint2(0xff3ab1a3, 0xffffffff),
+        uint2(0xb8a801a0, 0xfffffffa),
+        uint2(0xab9b3093, 0xfffffff9),
+        uint2(0xffb8aa89, 0xffffffff),
+        uint2(0xfffff874, 0xffffffff),
+        uint2(0xff437034, 0xffffffff),
+        uint2(0xff748910, 0xffffffff),
+        uint2(0x37174914, 0xfffffff1),
+        uint2(0xff748a21, 0xffffffff),
+        uint2(0x21403743, 0xfffffffa),
+        uint2(0x48209a29, 0xfffffff7),
+        uint2(0x727929a2, 0xffff4973),
+        uint2(0xff2b3748, 0xffffffff),
+        uint2(0x0242b74b, 0xfffffff4),
+        uint2(0x32748109, 0xfffffffb),
+        uint2(0xb9b49b74, 0xffff1292),
+        uint2(0x87ab31a3, 0xfffffff4),
+        uint2(0x01b41ab1, 0xffff4b74),
+        uint2(0xb9b09874, 0xffff30ba),
+        uint2(0xb99b4b74, 0xfffffffa),
+        uint2(0xfffff459, 0xffffffff),
+        uint2(0xff380459, 0xffffffff),
+        uint2(0xff051450, 0xffffffff),
+        uint2(0x13538458, 0xfffffff5),
+        uint2(0xff459a21, 0xffffffff),
+        uint2(0x94a21803, 0xfffffff5),
+        uint2(0x04245a25, 0xfffffff2),
+        uint2(0x535235a2, 0xffff8434),
+        uint2(0xffb32459, 0xffffffff),
+        uint2(0x94b802b0, 0xfffffff5),
+        uint2(0x32510450, 0xfffffffb),
+        uint2(0x82852512, 0xffff584b),
+        uint2(0x5931ab3a, 0xfffffff4),
+        uint2(0xa8180594, 0xffffab81),
+        uint2(0xb5b05045, 0xffff30ba),
+        uint2(0x8aa85845, 0xfffffffb),
+        uint2(0xff975879, 0xffffffff),
+        uint2(0x75359039, 0xfffffff3),
+        uint2(0x51710870, 0xfffffff7),
+        uint2(0xff753351, 0xffffffff),
+        uint2(0x1a759879, 0xfffffff2),
+        uint2(0x3505921a, 0xffff3750),
+        uint2(0x58528208, 0xffff25a7),
+        uint2(0x533525a2, 0xfffffff7),
+        uint2(0xb3987597, 0xfffffff2),
+        uint2(0x29279759, 0xffffb720),
+        uint2(0x71810b32, 0xffff7518),
+        uint2(0x1771b12b, 0xfffffff5),
+        uint2(0x1a758859, 0xffffb3a3),
+        uint2(0xb7905075, 0xf0aba010),
+        uint2(0x5a30b0ab, 0xf0757080),
+        uint2(0xff5b75ab, 0xffffffff),
+        uint2(0xfffff56a, 0xffffffff),
+        uint2(0xff6a5380, 0xffffffff),
+        uint2(0xff6a5109, 0xffffffff),
+        uint2(0xa5891381, 0xfffffff6),
+        uint2(0xff162561, 0xffffffff),
+        uint2(0x03621561, 0xfffffff8),
+        uint2(0x20609569, 0xfffffff6),
+        uint2(0x25285895, 0xffff8236),
+        uint2(0xff56ab32, 0xffffffff),
+        uint2(0x6a02b80b, 0xfffffff5),
+        uint2(0xa5b32910, 0xfffffff6),
+        uint2(0xb92916a5, 0xffffb892),
+        uint2(0x15356b36, 0xfffffff3),
+        uint2(0x505b0b80, 0xffff6b51),
+        uint2(0x606306b3, 0xffff9505),
+        uint2(0x9bb96956, 0xfffffff8),
+        uint2(0xff8746a5, 0xffffffff),
+        uint2(0x56374034, 0xfffffffa),
+        uint2(0x486a5091, 0xfffffff7),
+        uint2(0x7179156a, 0xffff4973),
+        uint2(0x74156216, 0xfffffff8),
+        uint2(0x03625521, 0xffff7434),
+        uint2(0x60509748, 0xffff6205),
+        uint2(0x23497937, 0xf9626959),
+        uint2(0x6a4872b3, 0xfffffff5),
+        uint2(0x242746a5, 0xffffb720),
+        uint2(0x32874910, 0xffff6a5b),
+        uint2(0x492b9129, 0xf6a54b7b),
+        uint2(0x535b3748, 0xffff6b51),
+        uint2(0x016b5b15, 0xfb404b7b),
+        uint2(0x30560950, 0xf74836b6),
+        uint2(0x74b96956, 0xffff9b79),
+        uint2(0xffa4694a, 0xffffffff),
+        uint2(0x80a946a4, 0xfffffff3),
+        uint2(0x4606a10a, 0xfffffff0),
+        uint2(0x68618138, 0xffffa164),
+        uint2(0x62421941, 0xfffffff4),
+        uint2(0x42921803, 0xffff4629),
+        uint2(0xff624420, 0xffffffff),
+        uint2(0x24428238, 0xfffffff6),
+        uint2(0x2b46a94a, 0xfffffff3),
+        uint2(0x94b82280, 0xffff6a4a),
+        uint2(0x606102b3, 0xffffa164),
+        uint2(0x84a16146, 0xf1b8b121),
+        uint2(0x19639469, 0xffff36b3),
+        uint2(0x6b0181b8, 0xf1464191),
+        uint2(0x600636b3, 0xfffffff4),
+        uint2(0xff86b846, 0xffffffff),
+        uint2(0x98a876a7, 0xfffffffa),
+        uint2(0x907a0370, 0xffffa76a),
+        uint2(0x717a176a, 0xffff0818),
+        uint2(0x7117a76a, 0xfffffff3),
+        uint2(0x81861621, 0xffff7689),
+        uint2(0x76192962, 0xf9373909),
+        uint2(0x06607087, 0xfffffff2),
+        uint2(0xff276237, 0xffffffff),
+        uint2(0x8a86ab32, 0xffff7689),
+        uint2(0x90b72702, 0xf7a9a767),
+        uint2(0xa1871081, 0xfb32a767),
+        uint2(0x6a71b12b, 0xffff1761),
+        uint2(0x19768698, 0xf63136b6),
+        uint2(0xff76b190, 0xffffffff),
+        uint2(0xb3607087, 0xffff06b0),
+        uint2(0xfffff6b7, 0xffffffff),
+        uint2(0xfffffb67, 0xffffffff),
+        uint2(0xff67b803, 0xffffffff),
+        uint2(0xff67b910, 0xffffffff),
+        uint2(0x7b138918, 0xfffffff6),
+        uint2(0xff7b621a, 0xffffffff),
+        uint2(0xb6803a21, 0xfffffff7),
+        uint2(0xb69a2092, 0xfffffff7),
+        uint2(0x8a3a27b6, 0xffff89a3),
+        uint2(0xff726327, 0xffffffff),
+        uint2(0x26067807, 0xfffffff0),
+        uint2(0x10732672, 0xfffffff9),
+        uint2(0x91681261, 0xffff6788),
+        uint2(0x3171a67a, 0xfffffff7),
+        uint2(0x81a7167a, 0xffff8017),
+        uint2(0xa0a70730, 0xffff7a69),
+        uint2(0xa88a7a67, 0xfffffff9),
+        uint2(0xff68b486, 0xffffffff),
+        uint2(0x40603b63, 0xfffffff6),
+        uint2(0x09648b68, 0xfffffff1),
+        uint2(0x39369649, 0xffff63b1),
+        uint2(0xa28b6486, 0xfffffff1),
+        uint2(0x60b03a21, 0xffff640b),
+        uint2(0x20b648b4, 0xffff9a29),
+        uint2(0x4923a39a, 0xf36463b3),
+        uint2(0x64248328, 0xfffffff2),
+        uint2(0xff264240, 0xffffffff),
+        uint2(0x42432091, 0xffff8346),
+        uint2(0x42241491, 0xfffffff6),
+        uint2(0x48168318, 0xffff1a66),
+        uint2(0x0660a01a, 0xfffffff4),
+        uint2(0xa6834364, 0xf39a9303),
+        uint2(0xff4a649a, 0xffffffff),
+        uint2(0xffb67594, 0xffffffff),
+        uint2(0x7b594380, 0xfffffff6),
+        uint2(0x67045105, 0xfffffffb),
+        uint2(0x5343867b, 0xffff5134),
+        uint2(0x6721a459, 0xfffffffb),
+        uint2(0x80a217b6, 0xffff5943),
+        uint2(0x24a45b67, 0xffff204a),
+        uint2(0x23453843, 0xf67b25a5),
+        uint2(0x45267327, 0xfffffff9),
+        uint2(0x60680459, 0xffff7862),
+        uint2(0x51673263, 0xffff0450),
+        uint2(0x12786826, 0xf8515848),
+        uint2(0x7161a459, 0xffff7316),
+        uint2(0x01671a61, 0xf4590787),
+        uint2(0x305a4a04, 0xfa737a6a),
+        uint2(0x458a7a67, 0xffffa84a),
+        uint2(0x8b9b6596, 0xfffffff9),
+        uint2(0x50360b63, 0xffff5906),
+        uint2(0x10b508b0, 0xffffb655),
+        uint2(0x355363b6, 0xfffffff1),
+        uint2(0xb9b59a21, 0xffff65b8),
+        uint2(0x90b603b0, 0xfa219656),
+        uint2(0x0865b58b, 0xf52025a5),
+        uint2(0xa25363b6, 0xffff35a3),
+        uint2(0x65825985, 0xffff2832),
+        uint2(0x60069659, 0xfffffff2),
+        uint2(0x65081851, 0xf8262838),
+        uint2(0xff612651, 0xffffffff),
+        uint2(0x83a61631, 0xf6989656),
+        uint2(0x5960a01a, 0xffff0650),
+        uint2(0xffa65830, 0xffffffff),
+        uint2(0xfffff65a, 0xffffffff),
+        uint2(0xffb57a5b, 0xffffffff),
+        uint2(0x3857ba5b, 0xfffffff0),
+        uint2(0x91ba57b5, 0xfffffff0),
+        uint2(0x897ba57a, 0xffff1381),
+        uint2(0x5717b21b, 0xfffffff1),
+        uint2(0x71721380, 0xffffb275),
+        uint2(0x09729579, 0xffff7b22),
+        uint2(0x95b27257, 0xf2898232),
+        uint2(0x73532a52, 0xfffffff5),
+        uint2(0x78258028, 0xffff52a5),
+        uint2(0x353a5109, 0xffff2a37),
+        uint2(0x78129289, 0xf25752a2),
+        uint2(0xff573531, 0xffffffff),
+        uint2(0x71170780, 0xfffffff5),
+        uint2(0x35539309, 0xfffffff7),
+        uint2(0xff795789, 0xffffffff),
+        uint2(0xba8a5485, 0xfffffff8),
+        uint2(0xa50b5405, 0xffff03bb),
+        uint2(0xa8a48910, 0xffff54ab),
+        uint2(0x3b54a4ba, 0xf4131494),
+        uint2(0xb2582152, 0xffff8548),
+        uint2(0x543b0b40, 0xfb151b2b),
+        uint2(0xb2950520, 0xf58b8545),
+        uint2(0xff3b2549, 0xffffffff),
+        uint2(0x43253a52, 0xffff4835),
+        uint2(0x244252a5, 0xfffffff0),
+        uint2(0x83a532a3, 0xf9108545),
+        uint2(0x914252a5, 0xffff2492),
+        uint2(0x53358548, 0xfffffff1),
+        uint2(0xff501540, 0xffffffff),
+        uint2(0x09358548, 0xffff5305),
+        uint2(0xfffff549, 0xffffffff),
+        uint2(0xa9b947b4, 0xfffffffb),
+        uint2(0xb9794380, 0xffffba97),
+        uint2(0x414b1ba1, 0xffffb470),
+        uint2(0xa1843413, 0xf4bab474),
+        uint2(0x294b97b4, 0xffff219b),
+        uint2(0x197b9479, 0xf3801b2b),
+        uint2(0x4224b47b, 0xfffffff0),
+        uint2(0x3824b47b, 0xffff4234),
+        uint2(0x32972a92, 0xffff9477),
+        uint2(0x2a4797a9, 0xf7020787),
+        uint2(0x472a3a73, 0xfa040a1a),
+        uint2(0xff4782a1, 0xffffffff),
+        uint2(0x17714194, 0xfffffff3),
+        uint2(0x80714194, 0xffff1781),
+        uint2(0xff347304, 0xffffffff),
+        uint2(0xfffff784, 0xffffffff),
+        uint2(0xff8ba8a9, 0xffffffff),
+        uint2(0x9bb93903, 0xfffffffa),
+        uint2(0xa88a0a10, 0xfffffffb),
+        uint2(0xffa3ba13, 0xffffffff),
+        uint2(0xb99b1b21, 0xfffffff8),
+        uint2(0x21b93903, 0xffff9b29),
+        uint2(0xffb08b20, 0xffffffff),
+        uint2(0xfffffb23, 0xffffffff),
+        uint2(0x8aa82832, 0xfffffff9),
+        uint2(0xff2902a9, 0xffffffff),
+        uint2(0x10a82832, 0xffff8a18),
+        uint2(0xfffff2a1, 0xffffffff),
+        uint2(0xff819831, 0xffffffff),
+        uint2(0xfffff190, 0xffffffff),
+        uint2(0xfffff830, 0xffffffff),
+        uint2(0xffffffff, 0xffffffff),
+};
 uint EdgeIndexFromTriangleTable(uint2 data, uint index)
 {
     return 0xfu & (index < 8 ? data.x >> ((index + 0) * 4) :
@@ -59,23 +313,28 @@ float4 VoxelValueWithGradient(uint3 i)
 // Output buffer and counter
 //
 
-RWByteAddressBuffer VertexBuffer;
-RWByteAddressBuffer IndexBuffer;
+struct VertexAttributes {
+    float3 position;
+    float3 normal;
+};
+
+RWStructuredBuffer<VertexAttributes> VertexBuffer;
+RWStructuredBuffer<uint3> IndexBuffer;
 RWStructuredBuffer<uint> Counter; // used only for counting
 
 // Vertex buffer accessor
 void WriteVertex(uint offset, float3 p, float3 n)
 {
-    uint addr_p = offset * SIZEOF_FLOAT3 * 2;
-    uint addr_n = addr_p + SIZEOF_FLOAT3;
-    VertexBuffer.Store3(addr_p, asuint(p));
-    VertexBuffer.Store3(addr_n, asuint(n));
+    VertexAttributes vertex;
+    vertex.position = p;
+    vertex.normal = n;
+    VertexBuffer[offset] = vertex;
 }
 
 // Index buffer accessor
 void WriteIndices(uint offset, uint3 indices)
 {
-    IndexBuffer.Store3(offset * SIZEOF_UINT, indices);
+    IndexBuffer[offset] = indices;
 }
 
 //
@@ -160,7 +419,7 @@ void MeshReconstruction(uint3 id : SV_DispatchThreadID)
         WriteVertex(vidx + 0, vertices[e1], normals[e1]);
         WriteVertex(vidx + 1, vertices[e2], normals[e2]);
         WriteVertex(vidx + 2, vertices[e3], normals[e3]);
-        WriteIndices(vidx, uint3(vidx, vidx + 1, vidx + 2));
+        WriteIndices(count, uint3(vidx, vidx + 1, vidx + 2));
     }
 }
 
@@ -179,6 +438,6 @@ void ClearUnused(uint id : SV_DispatchThreadID)
         WriteVertex(vidx + 0, 0, 0);
         WriteVertex(vidx + 1, 0, 0);
         WriteVertex(vidx + 2, 0, 0);
-        WriteIndices(vidx, uint3(0, 0, 0));
+        WriteIndices(count, uint3(0, 0, 0));
     }
 }
