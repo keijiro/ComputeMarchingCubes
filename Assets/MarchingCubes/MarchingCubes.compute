@@ -1,9 +1,17 @@
+#pragma multi_compile __ GENERATE_COLLIDER_MESH_DATA
+
 #pragma kernel MeshReconstruction
 #pragma kernel ClearUnused
+
+
 
 // Workaround for the absence of sizeof operator in HLSL
 #define SIZEOF_UINT 4
 #define SIZEOF_FLOAT3 12
+
+
+
+
 
 // Parameters
 uint3 Dims;
@@ -59,9 +67,25 @@ float4 VoxelValueWithGradient(uint3 i)
 // Output buffer and counter
 //
 
+#if defined(GENERATE_COLLIDER_MESH_DATA)
+RWByteAddressBuffer PositionBuffer;
+
+//helper to write only the float3 position:
+void WritePosition(uint offset, float3 p)
+{
+    // offset is the *vertex index*; each position is 12 bytes
+    PositionBuffer.Store3(offset * SIZEOF_FLOAT3, asuint(p));
+}
+#endif
+
 RWByteAddressBuffer VertexBuffer;
 RWByteAddressBuffer IndexBuffer;
 RWStructuredBuffer<uint> Counter; // used only for counting
+
+
+
+
+
 
 // Vertex buffer accessor
 void WriteVertex(uint offset, float3 p, float3 n)
@@ -157,6 +181,13 @@ void MeshReconstruction(uint3 id : SV_DispatchThreadID)
         if (count >= MaxTriangle) return;
 
         uint vidx = count * 3;
+        
+#if defined(GENERATE_COLLIDER_MESH_DATA)
+        WritePosition(vidx + 0, vertices[e1]);
+        WritePosition(vidx + 1, vertices[e2]);
+        WritePosition(vidx + 2, vertices[e3]);
+#endif
+        
         WriteVertex(vidx + 0, vertices[e1], normals[e1]);
         WriteVertex(vidx + 1, vertices[e2], normals[e2]);
         WriteVertex(vidx + 2, vertices[e3], normals[e3]);
@@ -175,7 +206,8 @@ void ClearUnused(uint id : SV_DispatchThreadID)
     {
         uint count = Counter.IncrementCounter();
         if (count >= MaxTriangle) break;
-        uint vidx = count * 3;
+        
+        uint vidx = count * 3;       
         WriteVertex(vidx + 0, 0, 0);
         WriteVertex(vidx + 1, 0, 0);
         WriteVertex(vidx + 2, 0, 0);
