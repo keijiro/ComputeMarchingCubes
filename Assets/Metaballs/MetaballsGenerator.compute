@@ -1,0 +1,34 @@
+#pragma kernel MetaballFieldGenerator
+
+uint3 Dims;                       // Grid dimensions
+float Scale;                      // Scale for positioning
+RWStructuredBuffer<float> Voxels; // Voxel buffer for output
+StructuredBuffer<float3> MetaballCenters; // Buffer of metaball centers
+StructuredBuffer<float> MetaballRadii;    // Buffer of metaball radii
+
+[numthreads(8, 8, 8)]
+void MetaballFieldGenerator(uint3 id : SV_DispatchThreadID)
+{
+    float3 p = Scale * (id + 0.5 - Dims / 2); // Position in 3D space for each voxel
+    float value = 0.0;
+
+    // Loop through each metaball and add its contribution to the field value
+    for (uint i = 0; i < MetaballCenters.Length; i++)
+    {
+        float3 center = MetaballCenters[i];
+        float radius = MetaballRadii[i];
+
+        // Calculate the distance from the voxel position to the metaball center
+        float distance = length(p - center);
+
+        // Metaball contribution (falloff function): decreases with distance
+        if (distance < radius)
+        {
+            float influence = (radius - distance) / radius;
+            value += influence * influence; // Squared to intensify the effect
+        }
+    }
+
+    // Write the resulting field value to the Voxels buffer
+    Voxels[id.x + Dims.x * (id.y + Dims.y * id.z)] = value;
+}

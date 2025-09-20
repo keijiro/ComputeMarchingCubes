@@ -1,8 +1,7 @@
-ComputeMarchingCubes
+ComputeMarchingCubes: Metaballs
 ====================
 
-![gif](https://user-images.githubusercontent.com/343936/121985718-420d6d80-cdd0-11eb-9f2f-04ed15d925c5.gif)
-![gif](https://user-images.githubusercontent.com/343936/121985721-43d73100-cdd0-11eb-89e4-3801387ac88d.gif)
+![gif](https://github.com/user-attachments/assets/9fefe65d-395f-452c-a7df-580e904a7c62)
 
 **ComputeMarchingCubes** is a Unity sample project that reconstructs
 isosurfaces of scalar volume data using a compute shader and the [new mesh API]
@@ -29,6 +28,7 @@ What's inside
 
 This project contains two sample scenes:
 
+- **Metaballs**: Visualizes a simple metaballs scene.
 - **NoiseField**: Visualizes a simple animating noise field.
 - **VolumeData**: Visualizes a CT scan dataset from the
   [Stanford volume data archive].
